@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ラジオ体操スタンプカード</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --sky:    #4A9ECA;
+    --sun:    #F5A623;
+    --stamp:  #E8501A;
+    --bg:     #F0F7FF;
+    --surface:#FFFFFF;
+    --text:   #1A2E3A;
+    --muted:  #7A96A8;
+    --border: #D6E8F4;
+    --radius: 10px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ════ 名前入力 ════ */
+  #registerScreen { display: none; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; }
+  #registerScreen.active { display: flex; }
+  .reg-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem 2rem; max-width: 360px; width: 100%; text-align: center; }
+  .reg-sun { font-size: 48px; margin-bottom: 1rem; animation: rise 0.8s ease-out both; }
+  @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .reg-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .reg-sub { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 1.75rem; }
+  .reg-label { display: block; font-size: 12px; font-weight: 600; color: var(--sky); letter-spacing: 0.06em; text-align: left; margin-bottom: 6px; }
+  .reg-input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; margin-bottom: 1.25rem; }
+  .reg-input:focus { border-color: var(--sky); }
+  .reg-input::placeholder { color: var(--muted); }
+  .reg-btn { width: 100%; background: var(--sky); color: #fff; border: none; border-radius: var(--radius); padding: 13px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+  .reg-btn:hover { background: #3A8DBE; }
+  .reg-btn:active { transform: scale(0.98); }
+  .reg-btn:disabled { background: var(--border); color: var(--muted); cursor: default; }
+  .reg-note { font-size: 11px; color: var(--muted); margin-top: 1rem; line-height: 1.6; }
+
+  /* ════ カード画面 ════ */
+  #cardScreen { display: none; padding-bottom: 3rem; }
+  #cardScreen.active { display: block; }
+
+  .hero {
+    background: linear-gradient(160deg, #1B6FA8 0%, #4A9ECA 60%, #6BBFE0 100%);
+    padding: 1.5rem 1.5rem 2.75rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 28px; background: var(--bg); border-radius: 50% 50% 0 0 / 100% 100% 0 0; }
+  .hero-sun { font-size: 32px; margin-bottom: 6px; animation: rise 0.8s ease-out both; }
+  .hero-title { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .hero-name { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 2px; text-shadow: 0 1px 6px rgba(0,0,0,0.2); }
+  .hero-name span { font-size: 14px; font-weight: 400; opacity: 0.8; margin-left: 2px; }
+  .hero-sub { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.04em; }
+
+  .main { max-width: 540px; margin: 0 auto; padding: 1.25rem 1rem 0; }
+
+  /* 統計 */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 8px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: var(--sky); line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* プログレス */
+  .progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1.25rem; }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .progress-pct { font-size: 18px; font-weight: 700; color: var(--stamp); }
+  .progress-frac { font-size: 12px; color: var(--muted); }
+  .bar-bg { background: var(--border); border-radius: 100px; height: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--stamp) 0%, var(--sun) 100%); border-radius: 100px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+
+  /* Collectボタン */
+  .collect-wrap { margin-bottom: 1.5rem; }
+  .collect-btn {
+    width: 100%; padding: 17px; border-radius: var(--radius); border: none;
+    font-family: inherit; font-size: 16px; font-weight: 700; letter-spacing: 0.04em;
+    cursor: pointer; transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .collect-btn.ready { background: var(--stamp); color: #fff; box-shadow: 0 4px 18px rgba(232,80,26,0.38); }
+  .collect-btn.ready:hover  { background: #D04416; }
+  .collect-btn.ready:active { transform: scale(0.98); }
+  .collect-btn.done     { background: #E8F5EE; color: #2A8050; border: 1.5px solid #A0D5B5; cursor: default; }
+  .collect-sub { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+  /* ════ スタンプカード本体 ════ */
+  .card-frame {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 1.25rem;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--sky); letter-spacing: 0.06em; }
+  .card-count { font-size: 11px; color: var(--muted); }
+
+  /* マス目グリッド — 7列固定 */
+  .stamp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .cell {
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1.25;
+    padding-bottom: 18px;
+  }
+  .cell.empty {
+    background: #F8FBFF;
+  }
+  .cell.stamped {
+    background: #FFF2EE;
+    border-color: #FBCBBA;
+  }
+
+  /* スタンプ画像エリア */
+  .cell-img {
+    width: 68%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cell-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+  }
+  .cell.stamped .cell-img img {
+    opacity: 1;
+  }
+
+  /* 日付ラベル */
+  .cell-date {
+    position: absolute;
+    bottom: 3px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .cell.empty .cell-date { opacity: 0; }
+
+  /* マス番号 */
+  .cell-num {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    font-size: 9px;
+    color: var(--border);
+    font-weight: 600;
+    line-height: 1;
+  }
+  .cell.stamped .cell-num { color: #F5BDA8; }
+
+  /* 新規スタンプアニメ */
+  .cell.stamp-anim .cell-img img {
+    animation: stamp-drop 0.45s cubic-bezier(.22,1.4,.36,1) both;
+  }
+  @keyframes stamp-drop {
+    0%   { transform: scale(2.2) rotate(-10deg); opacity: 0; }
+    60%  { transform: scale(0.88) rotate(2deg);  opacity: 1; }
+    100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+  }
+
+  /* バナー */
+  .banner { border-radius: var(--radius); padding: 12px 16px; font-size: 13px; margin-bottom: 1.25rem; display: none; align-items: center; gap: 10px; }
+  .banner.show { display: flex; }
+  .banner.info { background: #E8F5EE; border: 1px solid #A0D5B5; color: #1A6040; }
+
+  /* ポップアップ */
+  .popup-overlay { position: fixed; inset: 0; background: rgba(26,46,58,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .popup-overlay.show { opacity: 1; pointer-events: auto; }
+  .popup-box { background: var(--surface); border-radius: 20px; padding: 2.5rem 2rem; max-width: 300px; width: 90%; text-align: center; transform: scale(0.85) translateY(20px); transition: transform 0.35s cubic-bezier(.34,1.56,.64,1); }
+  .popup-overlay.show .popup-box { transform: scale(1) translateY(0); }
+  .popup-logo { width: 72px; height: 72px; margin: 0 auto 0.75rem; animation: spin-in 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+  .popup-logo img { width: 100%; height: 100%; object-fit: contain; }
+  @keyframes spin-in { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+  .popup-msg  { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.3; }
+  .popup-date { font-size: 12px; color: var(--muted); margin-bottom: 1.5rem; }
+  .popup-close { background: var(--sky); color: #fff; border: none; border-radius: var(--radius); padding: 11px 32px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s, transform 0.1s; }
+  .popup-close:hover { background: #3A8DBE; }
+  .popup-close:active { transform: scale(0.97); }
+
+  footer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); line-height: 1.8; }
+  .reset-link { font-size: 11px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; }
+  .reset-link:hover { color: var(--stamp); }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(72px); background: var(--text); color: #fff; border-radius: 100px; padding: 10px 22px; font-size: 13px; font-weight: 500; white-space: nowrap; transition: transform 0.3s cubic-bezier(.4,0,.2,1); z-index: 999; pointer-events: none; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- 名前入力 -->
+<div id="registerScreen">
+  <div class="reg-card">
+    <div class="reg-sun">🌅</div>
+    <div class="reg-title">ラジオ体操スタンプカード</div>
+    <p class="reg-sub">毎日参加した日にスタンプを押しましょう！</p>
+    <label class="reg-label" for="nameInput">あなたのお名前</label>
+    <input id="nameInput" class="reg-input" type="text" placeholder="例：山田 太郎" maxlength="20" autocomplete="off" />
+    <button id="startBtn" class="reg-btn" disabled>はじめる →</button>
+    <p class="reg-note">入力した名前はこのデバイスに保存されます。</p>
+  </div>
+</div>
+
+<!-- カード画面 -->
+<div id="cardScreen">
+  <div class="hero">
+    <div class="hero-sun">🌅</div>
+    <div class="hero-title">ラジオ体操スタンプカード</div>
+    <div class="hero-name" id="heroName"></div>
+    <div class="hero-sub" id="heroSub"></div>
+  </div>
+
+  <main class="main">
+    <div class="banner info" id="completeBanner">
+      <span>🎉</span><span>全マスコンプリート！おめでとうございます！</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card"><div class="stat-num" id="sCount">0</div><div class="stat-label">スタンプ数</div></div>
+      <div class="stat-card"><div class="stat-num" id="sTotal">—</div><div class="stat-label">合計マス数</div></div>
+      <div class="stat-card"><div class="stat-num" id="sRemain">—</div><div class="stat-label">残り</div></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span class="progress-pct" id="pPct">0%</span>
+        <span class="progress-frac" id="pFrac">0 / —</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" id="pBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="collect-wrap">
+      <button class="collect-btn ready" id="collectBtn">✿ Collect today's stamp</button>
+      <div class="collect-sub" id="collectSub"></div>
+    </div>
+
+    <div id="cardArea"></div>
+
+    <footer>
+      同じデバイス・ブラウザで記録が保持されます<br>
+      機種変更・ブラウザ変更時は記録が引き継がれません<br><br>
+      <button class="reset-link" id="resetBtn">最初からやり直す（データを削除）</button>
+    </footer>
+  </main>
+</div>
+
+<!-- ポップアップ -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup-box">
+    <div class="popup-logo"><img id="popupStampImg" src="" alt="stamp"/></div>
+    <div class="popup-msg" id="popupMsg">Keep it up!</div>
+    <div class="popup-date" id="popupDate"></div>
+    <button class="popup-close" id="popupClose">閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const STAMP_IMG_B64 = 'data:image/png;base64,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';
+
+  const CELLS_PER_PAGE = 30;
+  // 上限なし — 現在のスタンプ数に応じてページ数が増える
+  function totalCells(count) {
+    // 常に現在のページを満タン表示（最低1ページ）
+    const pages = Math.max(1, Math.ceil(Math.max(count, 1) / CELLS_PER_PAGE));
+    return pages * CELLS_PER_PAGE;
+  }
+
+  const UID_KEY  = 'rajio_uid_v3';
+  const NAME_KEY = 'rajio_name_v3';
+  function getUID() {
+    let uid = localStorage.getItem(UID_KEY);
+    if (!uid) { uid = 'u' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); localStorage.setItem(UID_KEY, uid); }
+    return uid;
+  }
+  const STAMP_KEY = 'rajio_stamps_v3_' + getUID();
+
+  const MESSAGES = [
+    'Keep it up!','Nice consistency!','Still going strong!',
+    'Another step!','One more done!','Progress made!',
+    'Impressive!','Small steps win.','You did it!',
+    'Consistency wins.','Built by consistency.','Strong move!',
+    'Nailed it!','Keep the streak!','Winning habit.',
+    'Consistency is key.','Consistency beats talent.',
+    'Progress over perfection.','Trust the process.'
+  ];
+
+  /* 画面切替 */
+  function showRegister() {
+    document.getElementById('registerScreen').classList.add('active');
+    document.getElementById('cardScreen').classList.remove('active');
+    setTimeout(() => document.getElementById('nameInput').focus(), 100);
+  }
+  function showCard() {
+    document.getElementById('registerScreen').classList.remove('active');
+    document.getElementById('cardScreen').classList.add('active');
+    renderCard();
+  }
+  localStorage.getItem(NAME_KEY) ? showCard() : showRegister();
+
+  /* 名前入力 */
+  const nameInput = document.getElementById('nameInput');
+  const startBtn  = document.getElementById('startBtn');
+  nameInput.addEventListener('input', () => { startBtn.disabled = !nameInput.value.trim(); });
+  nameInput.addEventListener('keydown', e => { if (e.key==='Enter' && !startBtn.disabled) registerName(); });
+  startBtn.addEventListener('click', registerName);
+  function registerName() {
+    const n = nameInput.value.trim(); if (!n) return;
+    localStorage.setItem(NAME_KEY, n); showCard();
+  }
+
+  /* リセット */
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('スタンプ記録と名前をすべて削除して最初からやり直しますか？')) return;
+    [NAME_KEY, STAMP_KEY, UID_KEY].forEach(k => localStorage.removeItem(k));
+    location.reload();
+  });
+
+  /* ポップアップ */
+  const overlay = document.getElementById('popupOverlay');
+  document.getElementById('popupClose').addEventListener('click', closePopup);
+  overlay.addEventListener('click', e => { if (e.target===overlay) closePopup(); });
+  document.getElementById('popupStampImg').src = STAMP_IMG_B64;
+  function showPopup(dateStr) {
+    document.getElementById('popupMsg').textContent  = MESSAGES[Math.floor(Math.random()*MESSAGES.length)];
+    document.getElementById('popupDate').textContent = dateStr + ' のスタンプ';
+    overlay.classList.add('show');
+  }
+  function closePopup() { overlay.classList.remove('show'); }
+
+  /* トースト */
+  let toastTimer;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  /* 日付 */
+  function getJST() { return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Tokyo'})); }
+  function fmtDate(d) {
+    return (d.getMonth()+1)+'/'+ String(d.getDate()).padStart(2,'0');
+  }
+  function fmtDateLong(d) {
+    return (d.getMonth()+1)+'月'+d.getDate()+'日';
+  }
+
+  /* スタンプ読み書き: [{date: ISO string}, ...] の配列 */
+  function loadStamps() { try { return JSON.parse(localStorage.getItem(STAMP_KEY)||'[]'); } catch(e) { return []; } }
+  function saveStamps(s) { try { localStorage.setItem(STAMP_KEY, JSON.stringify(s)); } catch(e) {} }
+
+  /* 今日すでに押したか */
+  function alreadyTodayKey() {
+    const now = getJST();
+    return now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate();
+  }
+  function stampedToday(stamps) {
+    return stamps.some(s => {
+      const d = new Date(s.date);
+      const jd = new Date(d.toLocaleString('en-US',{timeZone:'Asia/Tokyo'}));
+      return jd.getFullYear()+'-'+(jd.getMonth()+1)+'-'+jd.getDate() === alreadyTodayKey();
+    });
+  }
+
+  /* Collectボタン更新 */
+  function updateCollectBtn(stamps) {
+    const btn = document.getElementById('collectBtn');
+    const sub = document.getElementById('collectSub');
+    const full = false; // 上限なし
+
+    if (full) {
+      btn.className = 'collect-btn done';
+      btn.textContent = '🎉 All stamps collected!';
+      sub.textContent = '全マスコンプリート！';
+      btn.onclick = null;
+      return;
+    }
+    if (stampedToday(stamps)) {
+      btn.className = 'collect-btn done';
+      btn.innerHTML = '✿ Today\'s stamp collected!';
+      sub.textContent = '今日のスタンプは押し済みです';
+      btn.onclick = null;
+      return;
+    }
+    btn.className = 'collect-btn ready';
+    btn.innerHTML = '✿ Collect today\'s stamp';
+    sub.textContent = fmtDateLong(getJST()) + ' のスタンプを押す';
+    btn.onclick = () => {
+      const fresh = loadStamps();
+      if (stampedToday(fresh)) { renderCard(); return; }
+      fresh.push({ date: new Date().toISOString() });
+      saveStamps(fresh);
+      renderCard(fresh.length - 1); // 新しく押したインデックス
+      showPopup(fmtDateLong(getJST()));
+    };
+  }
+
+  /* メイン描画 */
+  function renderCard(newIdx) {
+    const name   = localStorage.getItem(NAME_KEY) || '';
+    const stamps = loadStamps();
+    const count  = stamps.length;
+
+    const TOTAL = totalCells(count);
+
+    document.getElementById('heroName').innerHTML = name + '<span> さんのカード</span>';
+    document.getElementById('heroSub').textContent = 'スタンプ ' + count + ' / ' + TOTAL;
+
+    document.getElementById('sCount').textContent  = count;
+    document.getElementById('sTotal').textContent  = TOTAL;
+    document.getElementById('sRemain').textContent = TOTAL - count;
+    const pct = Math.round((count / TOTAL) * 100);
+    document.getElementById('pPct').textContent  = pct + '%';
+    document.getElementById('pFrac').textContent = count + ' / ' + TOTAL;
+    document.getElementById('pBar').style.width  = pct + '%';
+
+    if (count > 0 && count === TOTAL) document.getElementById('completeBanner').classList.add('show');
+
+    updateCollectBtn(stamps);
+
+    /* グリッド描画 — 30マス単位でページ分割 */
+    const area = document.getElementById('cardArea');
+    area.innerHTML = '';
+
+    const pages = TOTAL / CELLS_PER_PAGE;
+    for (let p = 0; p < pages; p++) {
+      const frame = document.createElement('div');
+      frame.className = 'card-frame';
+
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'card-title';
+      titleEl.textContent = pages > 1 ? 'スタンプカード ' + (p + 1) + '枚目' : 'スタンプカード';
+      const startNum = p * CELLS_PER_PAGE + 1;
+      const endNum   = (p + 1) * CELLS_PER_PAGE;
+      const pageStamped = Math.min(count, endNum) - Math.min(count, startNum - 1);
+      const countEl = document.createElement('div');
+      countEl.className = 'card-count';
+      countEl.textContent = Math.max(0, pageStamped) + ' / ' + CELLS_PER_PAGE + ' マス';
+      header.appendChild(titleEl);
+      header.appendChild(countEl);
+      frame.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.className = 'stamp-grid';
+
+      for (let i = p * CELLS_PER_PAGE; i < (p + 1) * CELLS_PER_PAGE; i++) {
+        const cell = document.createElement('div');
+        const isStamped = i < count;
+        cell.className = 'cell ' + (isStamped ? 'stamped' : 'empty');
+        if (i === newIdx) cell.classList.add('stamp-anim');
+
+        const numEl = document.createElement('div');
+        numEl.className = 'cell-num';
+        numEl.textContent = i + 1;
+        cell.appendChild(numEl);
+
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'cell-img';
+        const img = document.createElement('img');
+        img.src = STAMP_IMG_B64;
+        img.alt = 'stamp';
+        imgWrap.appendChild(img);
+        cell.appendChild(imgWrap);
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'cell-date';
+        if (isStamped) {
+          const d  = new Date(stamps[i].date);
+          const jd = new Date(d.toLocaleString('en-US',{timeZone:'Asia/Tokyo'}));
+          dateEl.textContent = fmtDate(jd);
+        }
+        cell.appendChild(dateEl);
+
+        grid.appendChild(cell);
+      }
+
+      frame.appendChild(grid);
+      area.appendChild(frame);
+    }
+  }
+
+  renderCard();
+})();
+</script>
+</body>
+</html>
