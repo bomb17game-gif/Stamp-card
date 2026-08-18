@@ -239,8 +239,8 @@
   <div class="complete-box">
     <div class="complete-trophy">🏆</div>
     <div class="complete-name" id="completeName"></div>
-    <div class="complete-title"><span>30 Stamps</span><br>Complete!</div>
-    <p class="complete-sub">Amazing dedication!<br>You showed up every day. That's the real win!</p>
+    <div class="complete-title"><span id="completeSheetNum">30 Stamps</span><br>Complete!</div>
+    <p class="complete-sub" id="completeSub">Amazing dedication!<br>You showed up every day. That's the real win!</p>
     <button class="complete-close" id="completeClose">Woohoo! 🎉</button>
   </div>
 </div>
@@ -488,7 +488,10 @@
     document.getElementById('pBar').style.width  = pct+'%';
     if (count>0 && count===TOTAL) {
       document.getElementById('completeBanner').classList.add('show');
-      if (newIdx !== undefined) showComplete();
+    }
+    // 30の倍数達成時にお祝いポップアップ
+    if (newIdx !== undefined && count > 0 && count % CELLS_PER_PAGE === 0) {
+      showComplete(count);
     }
 
     updateCollectBtn(stamps);
@@ -540,9 +543,22 @@
     stopConfetti();
   });
 
-  function showComplete() {
-    const name = localStorage.getItem(NAME_KEY) || '';
-    document.getElementById('completeName').textContent = name + '';
+  function showComplete(count) {
+    const name    = localStorage.getItem(NAME_KEY) || '';
+    const sheet   = count / CELLS_PER_PAGE;
+    const messages = [
+      { sub: "Amazing dedication!<br>You showed up every day. That's the real win!" },
+      { sub: "Two cards done! You're on a roll — keep it going!" },
+      { sub: "Three cards! Consistency looks good on you." },
+      { sub: "Four cards strong! You're building something real." },
+      { sub: "Five cards! Halfway to legendary." },
+    ];
+    const msg = messages[Math.min(sheet - 1, messages.length - 1)];
+
+    document.getElementById('completeName').textContent   = name;
+    document.getElementById('completeSheetNum').textContent = count + ' Stamps';
+    document.getElementById('completeSub').innerHTML      = msg.sub;
+
     setTimeout(() => {
       document.getElementById('completeOverlay').classList.add('show');
       startConfetti();
